@@ -1,0 +1,387 @@
+if myHero.charName ~= "Akali" then return end
+
+local ts = nil
+local Qrange = 600
+local Wrange = 400
+local Erange = 325
+local Rrange = 700
+local ignite = nil
+local Sx, SAC = false
+local iDMG = 0
+	Items = {
+		
+	BC = { id = 3144, range = 400, reqTarget = true, slot = nil },
+	HG = { id = 3146, range = 400, reqTarget = true, slot = nil },
+	zSlot={ id = 3157, slot = nil },
+	}
+ 
+ require "SxOrbwalk"
+ 
+ function GetCustomTarget()
+	ts:update()
+	if _G.Reborn_Loaded and _G.AutoCarry and ValidTarget(_G.AutoCarry.Crosshair:GetTarget()) then return _G.AutoCarry.Crosshair:GetTarget() end
+	if not _G.Reborn_Loaded then return ts.target end
+	return ts.target
+end
+ 
+--Loading once 
+function OnLoad()
+
+		  PrintChat("<font color = \"#003366\">>> GetSomeAkali Loaded ! << </font>")
+					 AkaliMenu()
+end
+	--Akali Menu 
+function AkaliMenu()
+
+a=scriptConfig("GetSomeAkali","Akali")
+
+a:addSubMenu("Key settings","Keybinds")
+      a.Keybinds:addParam("combokey", "Combo key", SCRIPT_PARAM_ONKEYDOWN, false, 32)
+			a.Keybinds:addParam("harasskey", "Harass On/Off", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("c"))
+			a.Keybinds:addParam("clearKey", "Lane Clear On/Off", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("v"))
+		  a.Keybinds:addParam("jungleKey", "Jungle Clear", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("j"))
+			
+a:addSubMenu("Combo Settings","Combo")
+      a.Combo:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
+			a.Combo:addParam("UseW", "Use W", SCRIPT_PARAM_ONOFF, true)
+			a.Combo:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
+		  a.Combo:addParam("UseR", "Use R", SCRIPT_PARAM_ONOFF, true)
+			a.Combo:addParam("clogic", "Combo logic", SCRIPT_PARAM_LIST, 1, {"QREW","RQEW" })
+
+
+a:addSubMenu("Harass Settings","Harass")
+      a.Harass:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
+			a.Harass:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
+
+a:addSubMenu("Clear Settings","Laneclear")
+      a.Laneclear:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
+			a.Laneclear:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
+
+a:addSubMenu("Jungle Settings","Jungleclear")
+      a.Jungleclear:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
+			a.Jungleclear:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
+			a.Jungleclear:addParam("UseR", "Use R", SCRIPT_PARAM_ONOFF, true)
+
+a:addSubMenu("Item Settings","Items")
+      a.Items:addParam("Usehg", "Use Hextech Gunblade", SCRIPT_PARAM_ONOFF, true)
+			a.Items:addParam("usebc", "Use Bilgewater Cutlass", SCRIPT_PARAM_ONOFF, true)
+			a.Items:addParam("autozhonya", "Zhonya's if Health under -> %", SCRIPT_PARAM_SLICE, 10, 0, 100, 0)
+
+a:addSubMenu("Killsteal Settings","Killsteal")
+      a.Killsteal:addParam("ignite", "Use Ignite", SCRIPT_PARAM_ONOFF, true)
+      a.Killsteal:addParam("q", "Use Q", SCRIPT_PARAM_ONOFF, true)
+      a.Killsteal:addParam("e", "Use E", SCRIPT_PARAM_ONOFF, true)
+      a.Killsteal:addParam("r", "Use R", SCRIPT_PARAM_ONOFF, true)
+
+a:addSubMenu("Misc Settings","Misc")--dd2 stealth logic for HP and the code(i am newbie)  
+     a.Misc:addParam("usew", "Use W if your HP is under -> %", SCRIPT_PARAM_SLICE, 10, 0, 100, 0)
+		 a.Misc:addParam("useww", "Use W if X enemys in range", SCRIPT_PARAM_LIST, 1, {"2 enemys", "3 enemys", "4 enemys", "5 enemys" })
+		 
+a:addSubMenu("Draw Settings", "Drawings")
+a.Drawings:addParam("drawq", "Draw Q range", SCRIPT_PARAM_ONOFF, false)
+a.Drawings:addParam("drawe", "Draw E range", SCRIPT_PARAM_ONOFF, false)
+a.Drawings:addParam("drawr", "Draw R range", SCRIPT_PARAM_ONOFF, false)
+
+a:addSubMenu("Orbwalk Settings", "Orbwalker")
+
+DelayAction(function()
+		if _G.Reborn_Loaded then
+			a.Orbwalker:addParam("Orb", "Successfully integrated SAC", SCRIPT_PARAM_INFO,"")
+		  PrintChat("<font color = \"#0000FF\">>> SAC Successfully Integrated ! << </font>")
+			SAC = true
+		else
+			SxOrb:LoadToMenu(a.Orbwalker)
+				  PrintChat("<font color = \"#0000FF\">>> SxOrbwalker Successfully Integrated ! << </font>")
+			Sx = true
+		end
+	end, 10)
+ts = TargetSelector(TARGET_LESS_CAST_PRIORITY, 600, true)
+	ts.name = "[GetSomeAkali]"
+	a:addTS(ts)
+end
+
+function OnTick()
+
+Checks()
+Combo()
+Killsteal()
+Misc()
+Items()
+
+ if a.Keybinds.Combokey then
+        Combo(target)
+    elseif a.Keybinds.Harraskey then
+        Harass(target)
+    elseif a.Keybinds.Clearkey then
+        LaneClear()
+    elseif a.Keybindss.Junglekey then
+        JungleClear()
+    end
+
+    if a.KillSteal.useQ then
+        KillSteal()
+    end
+    if a.KillSteal.useE then
+        KillSteal()
+    end
+		  if a.KillSteal.useR then
+        KillSteal()
+    end
+    if a.KillSteal.Ignite then
+        AutoIgnite(enemy)
+    end
+
+end
+function Checks()
+	ts:update() -- We are updating our Target Selector every millisecond.
+	if SxOrb then
+	SxOrb:ForceTarget(target) 
+	elseif SAC then
+	SAC:ForceTarget(target)
+	end
+
+	QREADY = (myHero:CanUseSpell(_Q) == READY) 
+	WREADY = (myHero:CanUseSpell(_W) == READY) 
+	EREADY = (myHero:CanUseSpell(_E) == READY)
+	RREADY = (myHero:CanUseSpell(_R) == READY)
+  IREADY = (ignite ~= nil and myHero:CanUseSpell(ignite) == ready)
+		target = ts.target
+ end
+ 
+
+
+function Combo()
+	if ValidTarget(target) then
+	if a.Combo.clogic == 1 then
+		if QREADY and a.Combo.UseQ then
+			if GetDistance(target) <= Qrange then
+				CastSpell(_Q,target) 
+			end
+		end
+		if RREADY and a.Combo.UseR then 
+			if GetDistance(target) <= Rrange then 
+				CastSpell(_R, target) 
+			end
+		end
+		if EREADY and a.Combo.UseE then 
+			if GetDistance(target) <= Erange then 
+				CastSpell(_E, target) 
+			end
+		end
+		if WREADY and a.Combo.Usew then 
+			if GetDistance(target) <= Wrange then 
+            CastSpell(_W, myHero.x, myHero.z)
+			end
+		end
+			elseif a.Combo.clogic == 2 then
+			if RREADY and a.Combo.UseR then 
+			 if GetDistance(target) <= Rrange then 
+				CastSpell(_R, target) 
+			 end
+			end
+			if QREADY and a.Combo.UseQ then
+			 if GetDistance(target) <= Qrange then 
+				CastSpell(_Q,target) 
+			 end
+			end
+			if EREADY and a.Combo.UseE then 
+			 if GetDistance(target) <= Erange then 
+				CastSpell(_E, target) 
+			 end
+			end
+			if WREADY and a.Combo.Usew then 
+			 if GetDistance(target) <= Wrange then 
+            CastSpell(_W, myHero.x, myHero.z)
+						
+			 end
+	    end
+    end
+  end
+end
+function Harass()
+	if ValidTarget(target) then
+	if a.harass.useQ and Qready then 
+	if GetDistance(target) <= Qrange then 
+				CastSpell(_Q,target) 
+	end
+		if a.harass.useE and  Eready then
+		CastSpell(_E, target) 
+		end
+ end
+end
+
+function Orbwalker()
+	DelayAction(function()
+		if _G.Reborn_Loaded then
+			isSAC = true
+		else
+			isSX = true
+		end
+	end, 10)
+end
+
+function Laneclear()
+	enemyMinions:update()
+for i, minion in pairs(enemyMinions.objects) do
+			if minion ~= nil and ValidTarget(minion, Qrange) then
+			if Qready and a.Laneclear.UseQ then
+			if getDmg("Q", minion, myHero) >= minion.health then
+						CastSpell(_Q, minion)
+					else 
+						CastSpell(_Q, minion)
+					end
+				end
+				if ValidTarget(minion, Erange) and Eready and a.Laneclear.UseE then
+					if getDmg("E", minion, myHero) >= minion.health then
+						CastSpell(_E, minion)
+					else
+						CastSpell(_E)
+				end
+			end
+		end
+	end
+end
+function JungleClear()
+	local JungleMob = GetJungleMob()
+	
+	if JungleMob ~= nil then
+		if a.Jungleclear.UseQ and GetDistance(JungleMob) <= Qrange and Qready then
+			CastSpell(_Q, JungleMob)
+		end
+		if a.Jungleclear.UseE and GetDistance(JungleMob) <= Erange and Eready then
+			CastSpell(_E)
+		end
+	end
+end
+
+function Items()--akali elo shower zhonyas
+	local zSlot = GetInventorySlotItem(3157)
+		if zSlot ~= nil and myHero:CanUseSpell(zSlot) == READY then
+			local zRange = a.Items.autozhonya.zRange
+			local zAmount = a.Items.autozhonya.zAmount
+			local health = myHero.health
+			local maxHealth = myHero.maxHealth
+				if ((health/maxHealth)*100) <= a.items.autozhonya.zhonyasHP and CountEnemyHeroInRange(zRange) >= zAmount then
+			CastSpell(zSlot)
+		end
+	end
+	 if ValidTarget(target) and a.combo then
+        local tdis = GetDistance(target)
+            if a.Items.usehg and tdis < 700 then CastItem(3146, target) end
+            if a.Items.usebc and tdis < 550 then CastItem(3144, target) end
+        end
+    end
+end
+
+
+function DmgCalc()--akali elo shower 
+	for i=1, heroManager.iCount do
+		local enemy = heroManager:GetHero(i)
+			if enemy ~= nil and ValidTarget(enemy) then
+			local hp = enemy.health
+			local iDmg = (50 + (20 * myHero.level))
+			local qDmg = getDmg("Q", enemy, myHero)
+			local eDmg = getDmg("E", enemy, myHero)
+			local rDmg = getDmg("R", enemy, myHero)
+			if hp > (qDmg+eDmg+iDmg) then
+				killstring[enemy.networkID] = "Harass Him!!!"
+			elseif hp < qDmg then
+				killstring[enemy.networkID] = "Q Kill!"
+			elseif hp < eDmg then
+				killstring[enemy.networkID] = "E Kill!"
+			elseif hp < rDmg then
+				killstring[enemy.networkID] = "R Kill!"
+            elseif hp < (iDmg) then
+                killstring[enemy.networkID] = "Ignite Kill!"
+			elseif hp < (qDmg+iDmg) then
+				killstring[enemy.networkID] = "Q+Ignite Kill!"
+			elseif hp < (eDmg+iDmg) then
+				killstring[enemy.networkID] = "E+Ignite Kill!"
+			elseif hp < (rDmg+iDmg) then
+				killstring[enemy.networkID] = "R+Ignite Kill!"
+			elseif hp < (qDmg+eDmg) then
+                killstring[enemy.networkID] = "Q+E Kill!"
+			elseif hp < (qDmg+rDmg) then
+				killstring[enemy.networkID] = "Q+R Kill!"
+			elseif hp < (eDmg+rDmg) then
+				killstring[enemy.networkID] = "E+R Kill!"
+			elseif hp < (qDmg+eDmg+rDmg) then
+				killstring[enemy.networkID] = "Q+E+R Kill!"
+			elseif hp < (qDmg+eDmg+iDmg) then
+                killstring[enemy.networkID] = "Q+E+Ignite Kill!"
+			elseif hp < (qDmg+eDmg+rDmg+iDmg) then
+				killstring[enemy.networkID] = "Q+E+R+Ignite Kill!"
+			end
+		end
+	end
+end
+
+function Killsteal()
+ for _, enemy in ipairs(GetEnemyHeroes()) do	
+			local iDmg = (50 + (20 * myHero.level))
+			local qDmg = getDmg("Q", enemy, myHero)
+			local eDmg = getDmg("E", enemy, myHero)
+			local rDmg = getDmg("R", enemy, myHero)
+		if enemy ~= nil and ValidTarget(enemy, Qrange) then
+	if enemy.health <= qDmg and ValidTarget(enemy, Qrange) and Qready and a.Killsteal.useQ then
+				CastQ(enemy)
+	  elseif enemy.health <= (qDmg + eDmg) and ValidTarget(enemy, Erange) and Qready and Eready  and a.Killsteal.useQ and a.Killsteal.useE then
+		CastQ(enemy)
+	  CastE(enemy)
+		elseif enemy ~= nil and ValidTarget(enemy, Rrange) then
+		if enemy.health <= (qDmg + rDmg) and ValidTarget(enemy, Rrange) and Qready and Rready and  a.Killsteal.useR and a.Killsteal.useQ then
+				CastR(enemy)
+				CastQ(enemy)
+	  elseif enemy.health <= (qDmg + eDmg + rDmg) and ValidTarget(enemy, Rrange) and Qready and  Eready and R.ready and a.Killsteal.useR and a.Killsteal.useQ and a.Killsteal.useE then
+				CastR(enemy)
+				CastE(enemy)
+				CastQ(enemy)
+			end
+			elseif enemy.health <= (qDmg + eDmg + rDmg + iDmg) and ValidTarget(enemy, Rrange) and   Qready and E.ready and R.ready and Igniteready and a.Killsteal.useR and a.Killsteal.useQ and a.Killsteal.useE then
+				CastR(enemy)
+				CastQ(enemy)
+				CastE(enemy)
+				CastSpell(Ignite.slot, enemy)
+	  end
+	 end
+  end
+end
+				
+function Misc()
+  if a.Misc.Usew then
+if myHero.health <= (myHero.maxHealth * a.Misc.usew / 100) then 
+            CastSpell(_W, myHero.x, myHero.z)
+end
+if a.Misc.Useww then--dd2  Stealth For X enemies
+if a.Misc.useww == 1 then
+            if CountEnemyHeroInRange(900) >= 2 then
+                CastSpell(_W, myHero.x, myHero.z)
+            end
+        elseif a.Misc.useww == 2 then
+            if CountEnemyHeroInRange(900) >= 3 then
+                CastSpell(_W, myHero.x, myHero.z)
+            end
+        elseif a.Misc.useww == 3 then
+            if CountEnemyHeroInRange(900) >= 4 then
+                CastSpell(_W, myHero.x, myHero.z)
+            end
+        elseif a.Misc.useww == 4 then
+            if CountEnemyHeroInRange(900) >= 5 then
+                CastSpell(_W, myHero.x, myHero.z)
+            end
+        end
+    end
+end
+end
+
+function Drawings()
+	 if a.Drawings.DrawQ and QREADY and not myHero.dead then 
+		DrawCircle(myHero.x, myHero.y, myHero.z, Qrange, #FFFF00)  --with Qrange(600) The color will be Yellow.
+	 end
+	 if a.Drawings.DrawE and EREADY and not myHero.dead then 
+			DrawCircle(myHero.x, myHero.y, myHero.z, Erange, #ADD8E6)  --with Erange(325) The color will be Blue.
+	 end
+	 if a.Drawings.DrawR and RREADY and not myHero.dead then 
+			DrawCircle(myHero.x, myHero.y, myHero.z, Rrange, #FF0000)  --with Erange(325) The color will be Red.
+   end
+end
